@@ -1,5 +1,4 @@
 <div align="right">
-  <a href="https://github.com/guidance-ai/llguidance/issues/337"><img src="https://img.shields.io/badge/We%20Are%20Hiring!-8A2BE2"></a>
   <a href="https://discord.gg/cjPfAK43dz"><img src="https://img.shields.io/badge/Discord-Join%20Us-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
   <a href="mailto:guidanceai@microsoft.com"><img src="https://img.shields.io/badge/Email-guidanceai%40microsoft.com-0078D4?logo=microsoft-outlook&logoColor=white" alt="Email"></a>
   <img src="https://img.shields.io/badge/Hours-10am--2pm%20Pacific-gray" alt="Hours">
