@@ -1883,7 +1883,7 @@ dependencies = [
 [[package]]
 name = "pushdown-rs"
 version = "0.1.0"
-source = "git+https://github.com/sempervictus/pushdown-rs#da365889af7522aa3573264a437228e2222a6b2c"
+source = "git+https://github.com/sempervictus/pushdown-rs#ceb709c24a93322b2aaa0ad1cc9499ccb4c082ff"
 dependencies = [
  "bitvec",
  "rten-simd",
