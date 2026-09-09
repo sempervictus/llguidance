@@ -760,8 +760,16 @@ impl ParserState {
         if start.is_empty() {
             let curr_state = self.lexer_state();
             let has_pending = self.has_pending_lexeme_bytes();
+            // Key the cache on the row's lexer_start_state (the up-to-date DFA state), not
+            // the lexer_stack top (which lags one advance_parser push behind — the
+            // TOCTOU that served the frozen mask).
+            let key_state = self
+                .rows
+                .get(curr_state.row_idx as usize)
+                .map(|r| r.lexer_start_state)
+                .unwrap_or(curr_state.lexer_state);
             if let Some(ref cache) = self.bias_cache {
-                if cache.lexer_state == curr_state.lexer_state
+                if cache.lexer_state == key_state
                     && cache.row_idx == curr_state.row_idx
                     && cache.has_pending_lexeme_bytes == has_pending
                 {
@@ -811,8 +819,15 @@ impl ParserState {
         // Update cache when start is empty
         if start.is_empty() {
             let curr_state = self.lexer_state();
+            // Store the same key the check used (the row's lexer_start_state), so a
+            // hit only happens when the up-to-date state is genuinely unchanged.
+            let key_state = self
+                .rows
+                .get(curr_state.row_idx as usize)
+                .map(|r| r.lexer_start_state)
+                .unwrap_or(curr_state.lexer_state);
             self.bias_cache = Some(BiasCache {
-                lexer_state: curr_state.lexer_state,
+                lexer_state: key_state,
                 row_idx: curr_state.row_idx,
                 has_pending_lexeme_bytes: self.has_pending_lexeme_bytes(),
                 mask: set.clone(),
