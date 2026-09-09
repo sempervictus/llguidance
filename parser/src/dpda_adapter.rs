@@ -113,6 +113,14 @@ impl<'a> Grammar for PdaGrammar<'a> {
         self.global_to_local_terminal.get(sym.as_index()).copied().flatten()
     }
 
+    fn terminal_name(&self, sym: &CSymIdx) -> String {
+        // The CGrammar terminal's name (the "reasoning_block", the "text", the
+        // "tool_call", ...). The consumer (the llguidance mask builder) maps this
+        // name back to the terminal's token range (the LexemeSpec.token_ranges), so
+        // the PDA input bit is identified with the actual tokenizer lexeme.
+        self.grm.sym_name(*sym).to_string()
+    }
+
     fn nonterminal_id(&self, sym: &CSymIdx) -> Option<u32> {
         self.global_to_local_nonterminal.get(sym.as_index()).copied().flatten()
     }
