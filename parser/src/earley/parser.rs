@@ -1104,6 +1104,8 @@ impl ParserState {
         debug!("rollback: {} bytes", n_bytes);
         ensure!(self.parser_error.is_none(), "rollback: parser error");
         self.assert_definitive();
+        // Rewinding changes the settled state; drop the bias cache.
+        self.bias_cache = None;
         ensure!(
             n_bytes <= self.byte_to_token_idx.len(),
             "rollback: too many bytes {} > {}",
@@ -1319,6 +1321,10 @@ pub fn validate_tokens(&mut self, tokens: &[TokenId]) -> usize {
     // LLInterpreter interface, it is called indirectly via the commit_token() method.
     pub fn apply_token(&mut self, tok_bytes: &[u8], tok_id: TokenId) -> Result<usize> {
         self.assert_definitive();
+        // Consuming a token advances the settled state; the bias cache is only
+        // valid within a single state, so drop it (the TOCTOU-safe key alone does
+        // not detect every advance).
+        self.bias_cache = None;
 
         item_trace!("apply_token: {:?}", String::from_utf8_lossy(tok_bytes));
 
