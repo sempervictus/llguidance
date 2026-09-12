@@ -207,6 +207,27 @@ impl Matcher {
         .ok();
     }
 
+    /// The current PDA config (the control state + the stack). Exposed for the
+    /// xinfer GuidanceState to use instead of maintaining its own parallel
+    /// PDA mirror. Returns None when the PDA is not active (the parametric
+    /// grammar, or the dpda feature is off).
+    #[cfg(feature = "dpda")]
+    pub fn pda_config(&mut self) -> Option<(u32, Vec<u32>)> {
+        self.with_inner(|inner| {
+            Ok(inner.parser.pda_config())
+        })
+        .ok()
+        .flatten()
+    }
+
+    /// The PDA machine (the static transition table). Returns None when the
+    /// PDA is not active (the parametric grammar, or the dpda feature is off).
+    /// The PDA machine is computed once at parser construction and never
+    /// changes during the parse (only the PDA config changes). The xinfer
+    /// GuidanceState stores its own copy of the PDA machine; it only needs
+    /// the PDA config (the ctrl + stack) from the Matcher, which is exposed
+    /// via the pda_config method.
+
     /// Tries to advance the parser by consuming the given tokens.
     /// Returns the number of tokens consumed.
     /// Also checks if the parser should stop after consuming the tokens

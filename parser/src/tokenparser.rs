@@ -185,6 +185,19 @@ impl TokenParser {
         }
     }
 
+    /// The current PDA config (the control state + the stack). Delegates to
+    /// the inner Parser. Returns None when the PDA is not active.
+    #[cfg(feature = "dpda")]
+    pub fn pda_config(&mut self) -> Option<(u32, Vec<u32>)> {
+        self.parser.pda_config()
+    }
+
+    /// The PDA machine (the static transition table). Delegates to the inner Parser.
+    #[cfg(feature = "dpda")]
+pub fn pda_machine(&self) -> Option<&pushdown_rs::machine::PdaMachine> {
+        self.parser.pda_machine()
+    }
+
     pub fn bytes_since(&self, mut idx: usize) -> &[u8] {
         idx += self.grm_prefix.len();
         let endp = std::cmp::min(self.llm_bytes.len(), self.parser.hidden_start());
@@ -741,6 +754,14 @@ impl TokenParser {
     /// already-settled `currently_forced_bytes` (the `_immut` non-advancing
     /// read). Everything else is shared.
     fn ff_tokens_impl(&mut self, advance: bool) -> (Vec<TokenId>, Vec<u8>) {
+        // PDA singleton ff: if the PDA allows exactly one terminal AND that
+        // terminal covers exactly one token, the ff is that single token
+        // (the O(1) replacement for the byte-hunt over 256 values).
+        #[cfg(feature = "dpda")]
+        if let Some(forced_tok) = self.parser.pda_forced_token() {
+            return (vec![forced_tok], Vec::new());
+        }
+
         let mut forced_bytes = Vec::new();
         let mut existing_tokens = if self.llm_tokens.is_empty() {
             Vec::new()
