@@ -1150,44 +1150,48 @@ pub fn validate_tokens(&mut self, tokens: &[TokenId]) -> usize {
         // For non-deterministic PDAs, the single-config advance is conservative
         // (it may reject some legal tokens, but never accepts illegal ones).
         #[cfg(feature = "dpda")]
-        if let Some(ref pda) = self.pda {
-            let bridge = crate::dpda_adapter::terminal_token_map(self.grammar.as_ref(), &self.tok_env);
-            // Build the reverse bridge (token ID). terminal ID).
-            let mut reverse_bridge: std::collections::HashMap<u32, u32> = std::collections::HashMap::new();
-            for (terminal_id, token_ids) in bridge.iter().enumerate() {
-                for &tok in token_ids {
-                    reverse_bridge.insert(tok, terminal_id as u32);
-                }
-            }
-            let mut ctrl = self.pda_ctrl;
-            let mut stack = self.pda_stack.clone();
-            let mut count = 0;
-            for &tok in tokens {
-                // Check for EOS (the PDA accepting state).
-                if self.tok_env.tok_trie().eos_tokens().contains(&tok) {
-                    if pda.accepting.contains(&ctrl) {
-                        return count + 1;
+        if self.pda_bridge_exact {
+            if let Some(ref pda) = self.pda {
+                // Use the stored DFA-based bridge (the pda_bridge, computed at
+                // construction) rather than recomputing it without the DFA.
+                let bridge = &self.pda_bridge;
+                let mut reverse_bridge: std::collections::HashMap<u32, u32> =
+                    std::collections::HashMap::new();
+                for (terminal_id, token_ids) in bridge.iter().enumerate() {
+                    for &tok in token_ids {
+                        reverse_bridge.insert(tok, terminal_id as u32);
                     }
-                    return count;
                 }
-                // Map the token to the PDA terminal via the reverse bridge.
-                let Some(terminal_id) = reverse_bridge.get(&tok) else {
-                    break; // token not in any terminal (illegal)
-                };
-                // Advance the PDA (the epsilon-closure + the terminal move).
-                match pda.advance_eps(ctrl, &stack, *terminal_id) {
-                    Some((nq, ns)) => {
-                        ctrl = nq;
-                        stack = ns;
-                        count += 1;
+                let mut ctrl = self.pda_ctrl;
+                let mut stack = self.pda_stack.clone();
+                let mut count = 0;
+                for &tok in tokens {
+                    // Check for EOS (the PDA accepting state).
+                    if self.tok_env.tok_trie().eos_tokens().contains(&tok) {
+                        if pda.accepting.contains(&ctrl) {
+                            return count + 1;
+                        }
+                        return count;
                     }
-                    None => break, // the PDA rejected the token
+                    // Map the token to the PDA terminal via the reverse bridge.
+                    let Some(terminal_id) = reverse_bridge.get(&tok) else {
+                        break; // token not in any terminal (illegal)
+                    };
+                    // Advance the PDA (the epsilon-closure + the terminal move).
+                    match pda.advance_eps(ctrl, &stack, *terminal_id) {
+                        Some((nq, ns)) => {
+                            ctrl = nq;
+                            stack = ns;
+                            count += 1;
+                        }
+                        None => break, // the PDA rejected the token
+                    }
                 }
+                // Update the PDA config (the lockstep advance).
+                self.pda_ctrl = ctrl;
+                self.pda_stack = stack;
+                return count;
             }
-            // Update the PDA config (the lockstep advance).
-            self.pda_ctrl = ctrl;
-            self.pda_stack = stack;
-            return count;
         }
 
         self.run_speculative("validate_tokens", |state| {
